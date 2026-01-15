@@ -1,0 +1,14 @@
+# Java class files
+*.class
+
+# COMSOL binary model files
+*.mph
+
+# Intermediate status files
+*.status
+*.class.status
+*.class.recovery
+
+# Temporary files
+*.tmp
+*.bak
