@@ -1,44 +1,69 @@
 /*
- * tritum_cycle.java
- * 已修复编译错误：移除 AI 引用标记并修正变量命名
+ * tritum_cycle_batch.java
+ * 补全版本：通过 Java for 循环实现 TBR 批量仿真与独立导出
  */
 
 import com.comsol.model.*;
 import com.comsol.model.util.*;
 
-public class tritum_cycle {
+public class tritum_cycle_batch {
 
-    public static Model run() {
-        Model model = ModelUtil.create("Model");
-        // 设置模型工作路径
-        model.modelPath("D:\\Administrator\\Documents\\Github\\tricys_mph");
+    public static void main(String[] args) {
+        // 定义需要对比的 TBR 数值 [cite: 88]
+        double[] tbrValues = { 1.05, 1.10, 1.15, 1.20 };
+        String workPath = "D:\\Administrator\\Documents\\Github\\tricys_mph\\experiment_01\\";
 
-        // 1. 组件与物理场设置
+        for (double tbr : tbrValues) {
+            System.out.println(">>> 启动仿真：TBR = " + tbr);
+
+            // 为每个实验创建独立命名的模型，防止内存冲突
+            String modelTag = "Model_TBR_" + String.valueOf(tbr).replace(".", "_");
+            Model model = createModel(modelTag, tbr, workPath);
+
+            // 执行求解
+            System.out.println("求解中...");
+            model.sol("sol1").runAll();
+
+            // 导出该 TBR 下的结果图片
+            String imgFileName = workPath + "SDS_Trend_TBR_" + tbr + ".png";
+            model.result().export("img1").set("filename", imgFileName);
+            model.result().export("img1").run();
+
+            // 导出该 TBR 下的 CSV 数据
+            String csvFileName = workPath + "Data_TBR_" + tbr + ".csv";
+            model.result().export("data1").set("filename", csvFileName);
+            model.result().export("data1").run();
+
+            System.out.println("完成！图片已保存至: " + imgFileName);
+
+            // 运行完毕后从内存中移除模型，释放资源
+            ModelUtil.remove(modelTag);
+        }
+        System.out.println(">>> 所有批量实验运行完毕。");
+    }
+
+    /**
+     * 构建完整的 15 模块物理模型
+     */
+    public static Model createModel(String tag, double tbrValue, String path) {
+        Model model = ModelUtil.create(tag);
+        model.modelPath(path);
+
+        // 1. 基础物理配置
         model.component().create("comp1", true);
         model.component("comp1").physics().create("ge", "GlobalEquations");
-        model.component("comp1").physics("ge").prop("EquationForm").set("form", "Automatic");
 
-        // 2. 脉冲操作分析函数
-        model.func().create("an1", "Analytic");
-        model.func("an1").set("funcname", "f_pulse");
-        model.func("an1").set("expr", "if(x<T_cycle*AF, 1, 0)");
-        model.func("an1").set("periodic", true);
-        model.func("an1").set("periodicupper", "T_cycle");
-        model.func("an1").setIndex("argunit", "s", 0);
-        model.func("an1").set("fununit", "1");
-
-        // 3. 全局物理参数
-        model.param().label("Global Parameters");
-        model.param().set("TBR", "1.1", "Tritium Breeding Ratio");
-        model.param().set("beta", "0.06", "Burn efficiency");
-        model.param().set("f_e", "0.5", "Fueling efficiency");
-        model.param().set("AF", "0.5", "Duty cycle");
-        model.param().set("T_cycle", "3[h]", "Operation Cycle Period");
+        // 2. 全局参数 - 注入当前循环的 TBR 值
+        model.param().set("TBR", String.valueOf(tbrValue), "Current Breeding Ratio");
+        model.param().set("beta", "0.06", "Burn efficiency [cite: 58]");
+        model.param().set("f_e", "0.5", "Fueling efficiency [cite: 58]");
+        model.param().set("AF", "0.5", "Duty Cycle");
+        model.param().set("T_cycle", "3[h]", "Cycle period [cite: 58]");
         model.param().set("P_fusion", "1500[MW]", "Fusion Power");
-        model.param().set("factor1", "1.7805e-6[g/s/MW]", "Consumption per MW");
-        model.param().set("lanmda", "1.78e-9[1/s]", "Decay constant");
+        model.param().set("factor1", "1.7805e-6[g/s/MW]", "Tritium consumption rate");
+        model.param().set("lanmda", "1.78e-9[1/s]", "Decay constant [cite: 53]");
 
-        // 3.2 滞留时间 (T1-T15)
+        // 3. 滞留时间 T1-T15 [cite: 58-136]
         model.param().create("par2");
         model.param("par2").set("T1", "0.5[h]");
         model.param("par2").set("T2", "0.17[h]");
@@ -55,7 +80,7 @@ public class tritum_cycle {
         model.param("par2").set("T14", "48[h]");
         model.param("par2").set("T15", "5[s]");
 
-        // 3.3 循环份额 (Flow Fractions)
+        // 4. 循环份额 f_ij [cite: 62-128]
         model.param().create("par3");
         model.param("par3").set("f15_2", "0.9998");
         model.param("par3").set("f15_4", "1e-4");
@@ -73,7 +98,7 @@ public class tritum_cycle {
         model.param("par3").set("f13_12", "1");
         model.param("par3").set("f9_13", "1");
         model.param("par3").set("f10_13", "1");
-        model.param("par3").set("f14_13", "1"); // 修复：确保此处为下划线且无引文标记
+        model.param("par3").set("f14_13", "1");
 
         // 3.4 铺底量与损失率
         model.param().create("par5");
@@ -90,9 +115,9 @@ public class tritum_cycle {
             model.param("par4").set("epsilon" + i, "1e-4");
         }
 
-        // 4. 定义通量变量
+        // 5. 动态变量与通量逻辑
         model.component("comp1").variable().create("var1");
-        model.component("comp1").variable("var1").set("N_flux", "f_pulse(t)*P_fusion*factor1");
+        model.component("comp1").variable("var1").set("N_flux", "if(mod(t,T_cycle)<T_cycle*AF, P_fusion*factor1, 0)");
         model.component("comp1").variable("var1").set("I2_flux", "if(I2>I2_sat, (I2-I2_sat)/T2, 0)");
         model.component("comp1").variable("var1").set("I9_flux", "if(I9>I9_sat, (I9-I9_sat)/T9, 0)");
         model.component("comp1").variable("var1").set("I10_flux", "if(I10>I10_sat, (I10-I10_sat)/T10, 0)");
@@ -100,7 +125,7 @@ public class tritum_cycle {
         model.component("comp1").variable("var1").set("I13_flux", "if(I13>I13_sat, (I13-I13_sat)/T13, 0)");
         model.component("comp1").variable("var1").set("I14_flux", "if(I14>I14_sat, (I14-I14_sat)/T14, 0)");
 
-        // 5. 控制方程 (I1-I15)
+        // 6. 控制方程 (补全 I1-I15) [cite: 53-133]
         model.component("comp1").physics("ge").feature("ge1").set("CustomDependentVariableUnit", "g");
         model.component("comp1").physics("ge").feature("ge1").set("CustomSourceTermUnit", "g/s");
 
@@ -135,12 +160,11 @@ public class tritum_cycle {
             model.component("comp1").physics("ge").feature("ge1").setIndex("initialValueU", eqs[i][3], i, 0);
         }
 
-        // 6. 研究设置 (360 天，步长 1 天)
+        // 7. 研究与求解器 (360天)
         model.study().create("std1");
         model.study("std1").create("time", "Transient");
         model.study("std1").feature("time").set("tlist", "range(0, 86400, 86400*360)");
 
-        // 7. 求解器配置
         model.sol().create("sol1");
         model.sol("sol1").study("std1");
         model.sol("sol1").create("st1", "StudyStep");
@@ -149,47 +173,19 @@ public class tritum_cycle {
         model.sol("sol1").feature("t1").set("tlist", "range(0, 86400, 86400*360)");
         model.sol("sol1").feature("t1").create("fc1", "FullyCoupled");
         model.sol("sol1").attach("std1");
-        model.sol("sol1").runAll();
 
-        // 8. 结果绘图
+        // 8. 导出与绘图设置 (仅定义，不在此处运行)
         model.result().create("pg1", "PlotGroup1D");
-        model.result("pg1").label("Full Tritium Inventory Comparison");
+        model.result("pg1").label("SDS Trend - TBR " + tbrValue);
         model.result("pg1").create("glob1", "Global");
-        String[] allVars = new String[15];
-        for (int i = 0; i < 15; i++)
-            allVars[i] = eqs[i][0];
-        model.result("pg1").feature("glob1").set("expr", allVars);
-        model.result("pg1").feature("glob1").set("legend", true);
-        model.result("pg1").feature("glob1").set("legendmethod", "manual");
-        for (int i = 0; i < 15; i++)
-            model.result("pg1").feature("glob1").setIndex("legends", eqs[i][1], i);
+        model.result("pg1").feature("glob1").set("expr", new String[] { "I12" });
 
-        // 关键参数 SDS 趋势图
-        model.result().create("pg2", "PlotGroup1D");
-        model.result("pg2").label("SDS Tritium Inventory Trend");
-        model.result("pg2").create("glob2", "Global");
-        model.result("pg2").feature("glob2").set("expr", new String[] { "I12" });
-        model.result("pg2").feature("glob2").set("legend", true);
-        model.result("pg2").feature("glob2").set("legendmethod", "manual");
-        model.result("pg2").feature("glob2").setIndex("legends", "SDS Storage", 0);
-
-        // 9. 导出
         model.result().export().create("img1", "Image");
         model.result().export("img1").set("sourceobject", "pg1");
-        model.result().export("img1").set("filename",
-                "D:\\Administrator\\Documents\\Github\\tricys_mph\\full_cycle_plot.png");
-        model.result().export("img1").run();
 
-        model.result().export().create("img2", "Image");
-        model.result().export("img2").set("sourceobject", "pg2");
-        model.result().export("img2").set("filename",
-                "D:\\Administrator\\Documents\\Github\\tricys_mph\\sds_inventory_plot.png");
-        model.result().export("img2").run();
+        model.result().export().create("data1", "Data");
+        model.result().export("data1").set("expr", new String[] { "I12", "I6" });
 
         return model;
-    }
-
-    public static void main(String[] args) {
-        run();
     }
 }

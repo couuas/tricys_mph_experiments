@@ -1,0 +1,137 @@
+- model [Model]
+  - param [Parameters]
+    .set('TBR', '1.1')
+    .set('beta', '0.06')
+    .set('lanmda', '1.78e-9[1/s]')
+    .set('fw', '0.0001')
+    .set('fd', '1E-4')
+    .set('fb', '0.99')
+    .set('fe', '0.98')
+    .set('Y13_Ini', '5000[g]')
+    .set('P', '3000[MW]')
+    .set('N_Para', 'P/(6.515*beta)[MW/(g/day)]')
+    .set('N_flux', '0.459[kg/day]')
+    .set('I11_ini', '200[kg]')
+    .set('eta_f', '25/100')
+    .set('f_b', '0.36/100')
+    .set('f_e', '0.5')
+    .set('AF', '0.5')
+    .set('T_cycle', '3[h]')
+    .set('P_fusion', '1500[MW]')
+    .set('factor1', '1.7805E-06[g/s/(MW)]')
+    .set('I12_ini', '3.[kg]')
+    .set('I13_ini', '0.0[kg]')
+  - comp1 [true]
+    - ge [GlobalEquations]
+      - EquationForm [prop]
+        .set('form', 'Automatic')
+      - ge1 [feature]
+        .set('CustomDependentVariableUnit', '1')
+        .set('DependentVariableQuantity', 'none')
+        .set('CustomSourceTermUnit', '1')
+        .set('SourceTermQuantity', 'none')
+        .setIndex('name', ... 15 items)
+        .setIndex('initialValueU', ... 14 items)
+        .setIndex('initialValueUt', ... 14 items)
+        .setIndex('equation', ... 15 items)
+        .setIndex('CustomDependentVariableUnit', ... 1 items)
+        .setIndex('CustomSourceTermUnit', ... 1 items)
+        .setIndex('description', ... 14 items)
+    - var2 [variable]
+      .set('I2_flux', 'if(I2>I2_sat, (I2-I2_sat)/T2, 0)')
+      .set('I9_flux', 'if(I9>I9_sat, (I9-I9_sat)/T9, 0)')
+      .set('I10_flux', 'if(I10>I10_sat, (I10-I10_sat)/T10, 0)')
+      .set('I11_flux', 'if(I11>I11_sat, (I11-I11_sat)/T11, 0)')
+      .set('I13_flux', 'if(I13>I13_sat, (I13-I13_sat)/T13, 0)')
+      .set('I14_flux', 'if(I14>I14_sat, (I14-I14_sat)/T14, 0)')
+  - an1 [Analytic]
+    .set('periodic', 'true')
+    .set('expr', 'if(x<T_cycle*AF, 1, 0)')
+    .set('periodicupper', 'T_cycle')
+    .set('fununit', '1')
+    .set('funcname', 'f_pulse')
+    .set('dermethod', 'automatic')
+    .setIndex('plotargs', ... 1 items)
+    .setIndex('argunit', ... 1 items)
+  - var1 [variable]
+    .set('N_flux', 'f_pulse(t)*0.002654[g/s]')
+    .set('aa', 'N_flux*3600')
+  - pw1 [Piecewise]
+    .set('argunit', 's')
+    .set('fununit', '1')
+    .setIndex('pieces', ... 10 items)
+  - std1 [study]
+    - time [Transient]
+      .set('tlist', 'range(0,360,86400*300)')
+    - batsw [BatchSweep]
+      .set('sweeptype', 'filled')
+      .set('maxallow', '3')
+      .set('accumtable', 'tbl2')
+      .setIndex('pname', ... 2 items)
+      .setIndex('plistarr', ... 2 items)
+  - sol1 [sol]
+    - st1 [StudyStep]
+      .set('studystep', 'time')
+    - v1 [Variables]
+      .set('control', 'time')
+    - t1 [Time]
+      .set('tlist', 'range(0,360,86400*30)')
+      .set('plot', 'off')
+      .set('plotgroup', 'pg1')
+      .set('plotfreq', 'tout')
+      .set('probesel', 'all')
+      .set('probefreq', 'tsteps')
+      .set('atolglobalvaluemethod', 'factor')
+      .set('endtimeinterpolation', 'true')
+      .set('control', 'time')
+      .set('tstepsbdf', 'strict')
+      .set('maxstepconstraintbdf', 'auto')
+      .set('maxstepbdf', '1')
+      - fc1 [FullyCoupled]
+        .set('linsolver', 'dDef')
+  - sol3 []
+  - sol7 []
+  - sol8 []
+  - sol9 []
+  - sol10 []
+  - sol2 []
+  - gev1 [EvalGlobal]
+    .set('data', 'dset1')
+    .set('table', 'tbl1')
+  - tbl1 [Table]
+  - pg1 [PlotGroup1D]
+    .set('data', 'dset1')
+    .set('xlog', 'false')
+    .set('ylog', 'false')
+    .set('ylabelactive', 'true')
+    .set('ylabel', '\u76d8\u5b58\uff08kg\uff09')
+    .set('legendmaxwidthinside', '0.5')
+    .set('axislimits', 'false')
+    .set('ymin', '6.263145850519937E-10')
+  - pg2 [result]
+    .set('ylog', 'false')
+    .set('xlog', 'false')
+    .set('legendpos', 'lowerright')
+    .set('axislimits', 'false')
+    .set('ymax', '1e4')
+    .set('ymin', '1e-3')
+    .set('xmin', '0.1')
+    .set('xmax', '1e4')
+    .set('data', 'dset1')
+    .setIndex('looplevelinput', ... 1 items)
+    .setIndex('looplevel', ... 1 items)
+  - gev2 [EvalGlobal]
+    .set('data', 'dset2')
+  - pg3 [PlotGroup1D]
+    .set('data', 'dset2')
+    .set('ylog', 'false')
+    .set('xlog', 'false')
+    .set('legendpos', 'upperleft')
+    .setIndex('looplevelinput', ... 3 items)
+    .setIndex('looplevel', ... 3 items)
+  - pg5 [result]
+    .setIndex('looplevelinput', ... 1 items)
+    .setIndex('looplevel', ... 1 items)
+  - tbl2 [Table]
+  - pg6 [PlotGroup1D]
+    .set('data', 'dset2')

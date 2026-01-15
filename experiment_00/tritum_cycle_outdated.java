@@ -11,7 +11,7 @@ public class tritum_cycle_outdated {
 
      public static Model run() {
           Model model = ModelUtil.create("Model");
-          model.modelPath("D:\\Administrator\\Documents\\Github\\tricys_mph");
+          model.modelPath("D:\\Administrator\\Documents\\Github\\tricys_mph\\experiment_00");
 
           // 1. Component & Physics
           model.component().create("comp1", true);
@@ -312,7 +312,7 @@ public class tritum_cycle_outdated {
           model.result().export("data1").set("data", "dset1");
           model.result().export("data1").set("expr", exprs);
           model.result().export("data1").set("filename",
-                    "D:\\Administrator\\Documents\\Github\\tricys_mph\\tritum_cycle_data.csv");
+                    "D:\\Administrator\\Documents\\Github\\tricys_mph\\experiment_00\\tritum_cycle_data.csv");
           model.result().export("data1").run();
 
           model.result().create("pg1", "PlotGroup1D");
@@ -331,7 +331,7 @@ public class tritum_cycle_outdated {
           model.result().export().create("img1", "Image");
           model.result().export("img1").set("sourceobject", "pg1");
           model.result().export("img1").set("filename",
-                    "D:\\Administrator\\Documents\\Github\\tricys_mph\\tritum_cycle_plot.png");
+                    "D:\\Administrator\\Documents\\Github\\tricys_mph\\experiment_00\\tritum_cycle_plot.png");
           model.result().export("img1").run();
 
           return model;
